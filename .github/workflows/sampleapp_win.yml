@@ -1,0 +1,44 @@
+name: SampleApp deploy (Windows)
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: ilammy/msvc-dev-cmd@v1
+    - name: Cache Qt
+      id: cache-qt
+      uses: actions/cache@v1
+      with:
+        path: ../Qt
+        key: ${{ runner.os }}-QtCache
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v2
+      with:
+        cached: ${{ steps.cache-qt.outputs.cache-hit }}
+        version: 5.15.0
+    - name: Install Jom
+      run: |
+        curl -LO https://download.qt.io/official_releases/jom/jom.zip
+        unzip jom.zip -d jom
+    - name: Build SampleApp
+      run: |
+        mkdir build
+        cd build
+        qmake ../SampleApp/SampleApp.pro CONFIG+=release
+        ../jom/jom.exe
+        mkdir SampleApp_win32
+        cp release/SampleApp.exe ./SampleApp_win32
+        cd SampleApp_win32
+        windeployqt --qmldir ../../SampleApp/ SampleApp.exe
+        cd ../../
+    - uses: actions/upload-artifact@v2
+      with:
+        name: SampleApp_win32
+        path: build/SampleApp_win32/

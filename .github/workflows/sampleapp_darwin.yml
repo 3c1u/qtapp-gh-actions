@@ -1,0 +1,39 @@
+name: SampleApp deploy (macOS)
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Cache Qt
+      id: cache-qt
+      uses: actions/cache@v1
+      with:
+        path: ../Qt
+        key: ${{ runner.os }}-QtCache
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v2
+      with:
+        cached: ${{ steps.cache-qt.outputs.cache-hit }}
+        version: 5.15.0
+    - name: Build SampleApp
+      run: |
+        mkdir build
+        cd build
+        qmake ../SampleApp/SampleApp.pro CONFIG+=release
+        make -j4
+        macdeployqt SampleApp.app -qmldir=../SampleApp/
+        mkdir SampleApp_darwin
+        cp -R SampleApp.app ./SampleApp_darwin
+        zip -r SampleApp_darwin SampleApp_darwin/
+        cd ../
+    - uses: actions/upload-artifact@v2
+      with:
+        name: SampleApp_darwin
+        path: build/SampleApp_darwin.zip
